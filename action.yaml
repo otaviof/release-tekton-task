@@ -7,6 +7,10 @@ inputs:
     default: v1.5.0
     description: Version of helm/chart-releaser (cr)
     required: false
+  repository_name:
+    default: ""
+    description: GitHub repository name, only the last name without the organization
+    required: true
 runs:
   using: composite
   steps:
@@ -19,4 +23,6 @@ runs:
       run: ${{ github.action_path }}/probe.sh
 
     - shell: bash
+      env:
+        INPUT_REPOSITORY_NAME: ${{ inputs.repository_name }}
       run: ${{ github.action_path }}/task-releaser.sh

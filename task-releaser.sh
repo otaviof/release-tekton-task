@@ -26,7 +26,7 @@ readonly GITHUB_ACTOR="${GITHUB_ACTOR:-}"
 readonly GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 
 # the repository name without the user/organization
-readonly GITHUB_REPOSITORY_NAME="${GITHUB_REPOSITORY_NAME:-}"
+readonly INPUT_REPOSITORY_NAME="${INPUT_REPOSITORY_NAME:-}"
 
 [[ -z "${GITHUB_REF_NAME}" ]] && \
 	fail "GITHUB_REF_NAME environment variable is not set"
@@ -37,8 +37,8 @@ readonly GITHUB_REPOSITORY_NAME="${GITHUB_REPOSITORY_NAME:-}"
 [[ -z "${GITHUB_TOKEN}" ]] && \
 	fail "GITHUB_TOKEN environment variable is not set"
 
-[[ -z "${GITHUB_REPOSITORY_NAME}" ]] && \
-	fail "GITHUB_REPOSITORY_NAME environment variable is not set"
+[[ -z "${INPUT_REPOSITORY_NAME}" ]] && \
+	fail "INPUT_REPOSITORY_NAME environment variable is not set"
 
 # making sure the chart name and version can be extracted from the Chart.yaml file, it must be
 # located in the current directory where the script is being executed
@@ -93,13 +93,13 @@ helm template ${CHART_NAME} . >${TASK_PAYLOAD_FILE}
 # Release Upload
 #
 
-readonly ACTOR_REPOSITORY="${GITHUB_ACTOR}/${GITHUB_REPOSITORY_NAME}"
+readonly ACTOR_REPOSITORY="${GITHUB_ACTOR}/${INPUT_REPOSITORY_NAME}"
 
 # uploading the chart release using it's version as the release name
 phase "Uploading chart '${CHART_TARBALL}' to '${ACTOR_REPOSITORY}' ($CHART_VERSION)"
 cr upload \
 	--owner="${GITHUB_ACTOR}" \
-	--git-repo="${GITHUB_REPOSITORY_NAME}" \
+	--git-repo="${INPUT_REPOSITORY_NAME}" \
 	--token="${GITHUB_TOKEN}" \
 	--release-name-template='{{ .Version }}'
 

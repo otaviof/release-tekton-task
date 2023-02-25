@@ -14,7 +14,7 @@ TASK_RELEASER_SH="${PWD}/task-releaser.sh"
 	export GITHUB_REF_NAME="0.0.1"
 	export GITHUB_ACTOR="actor"
 	export GITHUB_TOKEN="token"
-	export GITHUB_REPOSITORY_NAME="repository"
+	export INPUT_REPOSITORY_NAME="repository"
 
 	{
 		cd ${BASE_DIR}
@@ -31,7 +31,7 @@ TASK_RELEASER_SH="${PWD}/task-releaser.sh"
 	export GITHUB_REF_NAME="0.0.1"
 	export GITHUB_ACTOR="actor"
 	export GITHUB_TOKEN="token"
-	export GITHUB_REPOSITORY_NAME="repository"
+	export INPUT_REPOSITORY_NAME="repository"
 
 	cp -r ./test/mock/chart/* ${BASE_DIR}/
 
