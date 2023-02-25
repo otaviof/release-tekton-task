@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#
+# Mocked `gh` executable.
+#
+
+shopt -s inherit_errexit
+set -eu -o pipefail
+
+echo -ne "#\n# Mocked:\n#\t$(basename ${0}) ${*}\n#\n"

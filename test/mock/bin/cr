@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#
+# Mocked `cr` (chart-releaser) executable.
+#
+
+shopt -s inherit_errexit
+set -eu -o pipefail
+
+readonly SUB_COMMAND="${1:-}"
+
+echo -ne "#\n# Mocked:\n#\t$(basename ${0}) ${*}\n#\n"
+
+# skipping any other subcommands than `package`...
+[[ "${SUB_COMMAND}" != "package" ]] && \
+	exit 0
+
+# when `cr package` is invoked it expects to find the chart tarball in the destination directory,
+# thus here we are using `helm` mimic the expected behaviour
+set -x
+readonly DESTINATION=".cr-release-packages"
+mkdir -v ${DESTINATION}
+exec helm package --destination="${DESTINATION}" .

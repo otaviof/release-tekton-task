@@ -1,0 +1,31 @@
+---
+name: test
+
+on:
+  push:
+    tags-ignore:
+      - "**"
+    branches:
+      - "**"
+    paths-ignore:
+      - "*.md"
+  pull_request:
+    branches:
+      - "**"
+    paths-ignore:
+      - "*.md"
+
+jobs:
+  test-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      # installs helm command line
+      - uses: azure/setup-helm@v3
+
+      # running integration test target
+      - name: test-integration
+        run: make test-integration
