@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+shopt -s inherit_errexit
+set -eu -o pipefail
+
+printf "#\n# Mocked:\n#\t%s %s\n#\n" $(basename ${0}) "${*}"
+
+readonly HELM_BIN=${HELM_BIN:-}
+
+if [ ! -f "${HELM_BIN}" ]; then
+	echo "Helm binary can't be found at '${HELM_BIN}'" >&2
+	exit 1
+fi
+
+readonly SUB_COMMAND="${1:-}"
+
+[[ "${SUB_COMMAND}" == "registry" || "${SUB_COMMAND}" == "push" ]] &&
+	exit 0
+
+set -x
+exec ${HELM_BIN} ${*}

@@ -61,6 +61,15 @@ readonly CHART_VERSION="$(awk '/^version:/ { print $2 }' Chart.yaml)"
 	fail "Git tag '${GITHUB_REF_NAME}' and chart version '${CHART_VERSION}' must be the same!"
 
 #
+# Registry Login
+#
+
+readonly CONTAINER_REGISTRY="ghcr.io"
+
+phase "Logging in the Container-Registry '${CONTAINER_REGISTRY}' ('${GITHUB_ACTOR}')"
+helm registry login --username="${GITHUB_ACTOR}" --password="${GITHUB_TOKEN}" ${CONTAINER_REGISTRY}
+
+#
 # Packaging Chart and Rendering Task
 #
 
@@ -94,6 +103,10 @@ helm template ${CHART_NAME} . >${TASK_PAYLOAD_FILE}
 #
 
 readonly ACTOR_REPOSITORY="${GITHUB_ACTOR}/${INPUT_REPOSITORY_NAME}"
+readonly OCI_IMAGE="oci://${ACTOR_REPOSITORY}"
+
+phase "Pushing '${CHART_TARBALL}' into '${OCI_IMAGE}'"
+helm push ${CHART_TARBALL} ${OCI_IMAGE}
 
 # uploading the chart release using it's version as the release name
 phase "Uploading chart '${CHART_TARBALL}' to '${ACTOR_REPOSITORY}' ($CHART_VERSION)"

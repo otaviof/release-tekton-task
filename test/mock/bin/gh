@@ -6,4 +6,4 @@
 shopt -s inherit_errexit
 set -eu -o pipefail
 
-echo -ne "#\n# Mocked:\n#\t$(basename ${0}) ${*}\n#\n"
+printf "#\n# Mocked:\n#\t%s %s\n#\n" $(basename ${0}) "${*}"

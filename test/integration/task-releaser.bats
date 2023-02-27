@@ -4,6 +4,12 @@ source ./test/helper/helper.sh
 
 TASK_RELEASER_SH="${PWD}/task-releaser.sh"
 
+# original helm executable location
+export HELM_BIN="$(which helm)"
+
+# mocked binaries directory
+MOCK_BIN="${PWD}/test/mock/bin"
+
 @test "should fail when the required environment variables are not set" {
 	run ${TASK_RELEASER_SH}
 	assert_failure
@@ -17,6 +23,8 @@ TASK_RELEASER_SH="${PWD}/task-releaser.sh"
 	export INPUT_REPOSITORY_NAME="repository"
 
 	{
+		export PATH="${MOCK_BIN}:${PATH}"
+
 		cd ${BASE_DIR}
 
 		run ${TASK_RELEASER_SH}
@@ -36,8 +44,7 @@ TASK_RELEASER_SH="${PWD}/task-releaser.sh"
 	cp -r ./test/mock/chart/* ${BASE_DIR}/
 
 	{
-		# making sure the required executables take precedence
-		export PATH="${PWD}/test/mock/bin:${PATH}"
+		export PATH="${MOCK_BIN}:${PATH}"
 
 		cd ${BASE_DIR}
 
