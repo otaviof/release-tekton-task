@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#
+# Mocks a generic executable, only prints the issued command.
+#
+
+shopt -s inherit_errexit
+set -eu -o pipefail
+
+printf "#\n# Mocked:\n#\t%s %s\n#\n" $(basename ${0}) "${*}"

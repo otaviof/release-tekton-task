@@ -1,23 +1,55 @@
 ---
 name: task-releaser
 description: |
-  Releases a Tekton Task...
+  Action to release a Tekton Task packaged as a Helm-Chart. The release is based on the Chart
+  (Chart.yaml) version and the current Git tag (shared via `GITHUB_REF_NAME`), the following
+  artifacts are related:
+
+   - Helm-Chart package (`.tgz`)
+   - Tekton Task resource (`.yaml`)
+   - Helm-Chart container-image (OCI)
+   - Tekton Task Bundle container-image (OCI)
 inputs:
-  chart_releaser_version:
-    default: v1.5.0
-    description: Version of helm/chart-releaser (cr)
-    required: false
   repository_name:
-    default: ""
-    description: GitHub repository name, only the last name without the organization
+    description: |
+      GitHub repository name, only the last name without the organization
     required: true
+  bundle_suffix:
+    description: |
+      Tekton Task Bundle image name suffix (`tkn bundle`)
+    default: "-bundle"
+    required: false
+  cr_version:
+    description: |
+      Helm Chart-Releaser (`cr`) version
+    default: v1.5.0
+    required: false
+  cli_version:
+    description: |
+      Tekton CLI (`tkn`) version
+    default: v0.29.1
+    required: false
+  helm_version:
+    description: |
+      Helm CLI (`helm`) version
+    default: latest
+    required: false
 runs:
   using: composite
   steps:
+    - uses: azure/setup-helm@v3
+      with:
+        version: ${{ inputs.helm_version }}
+
     - shell: bash
       env:
-        INPUT_CHART_RELEASER_VERSION: ${{ inputs.chart_releaser_version }}
-      run: sudo -E ${{ github.action_path }}/install-chart-releaser.sh
+        INPUT_CR_VERSION: ${{ inputs.cr_version }}
+      run: sudo -E ${{ github.action_path }}/install-cr.sh
+
+    - shell: bash
+      env:
+        INPUT_CLI_VERSION: ${{ inputs.cli_version }}
+      run: sudo -E ${{ github.action_path }}/install-cli.sh
 
     - shell: bash
       run: ${{ github.action_path }}/probe.sh
@@ -25,4 +57,5 @@ runs:
     - shell: bash
       env:
         INPUT_REPOSITORY_NAME: ${{ inputs.repository_name }}
+        INPUT_BUNDLE_SUFFIX: ${{ inputs.bundle_suffix }}
       run: ${{ github.action_path }}/task-releaser.sh

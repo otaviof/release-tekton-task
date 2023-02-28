@@ -2,16 +2,16 @@
 
 source ./test/helper/helper.sh
 
-TASK_RELEASER_SH="${PWD}/task-releaser.sh"
+task_releaser_sh="${PWD}/task-releaser.sh"
 
 # original helm executable location
 export HELM_BIN="$(which helm)"
 
 # mocked binaries directory
-MOCK_BIN="${PWD}/test/mock/bin"
+mock_bin="${PWD}/test/mock/bin"
 
 @test "should fail when the required environment variables are not set" {
-	run ${TASK_RELEASER_SH}
+	run ${task_releaser_sh}
 	assert_failure
 	assert_output --partial 'is not set'
 }
@@ -21,13 +21,14 @@ MOCK_BIN="${PWD}/test/mock/bin"
 	export GITHUB_ACTOR="actor"
 	export GITHUB_TOKEN="token"
 	export INPUT_REPOSITORY_NAME="repository"
+	export INPUT_BUNDLE_SUFFIX="-bundle"
 
 	{
-		export PATH="${MOCK_BIN}:${PATH}"
+		export PATH="${mock_bin}:${PATH}"
 
 		cd ${BASE_DIR}
 
-		run ${TASK_RELEASER_SH}
+		run ${task_releaser_sh}
 		assert_failure
 		assert_output --partial 'not found'
 
@@ -40,15 +41,16 @@ MOCK_BIN="${PWD}/test/mock/bin"
 	export GITHUB_ACTOR="actor"
 	export GITHUB_TOKEN="token"
 	export INPUT_REPOSITORY_NAME="repository"
+	export INPUT_BUNDLE_SUFFIX="-bundle"
 
 	cp -r ./test/mock/chart/* ${BASE_DIR}/
 
 	{
-		export PATH="${MOCK_BIN}:${PATH}"
+		export PATH="${mock_bin}:${PATH}"
 
 		cd ${BASE_DIR}
 
-		run ${TASK_RELEASER_SH}
+		run ${task_releaser_sh}
 		assert_success
 
 		cd -

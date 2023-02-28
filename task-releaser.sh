@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 #
-# Uses the `helm/chart-releaser` (cr) to package and relase the local chart, the artifact version
-# must be the same than the current repository tag. The script renders the Task resource in a single
-# file to become part of the release artifacts.
+# Release script to pacakge and upload a Helm-Chart packaging a Tekton Task. The following items are
+# part of the release:
 #
-# This script packages and upload the data to GitHub using `cr` and `gh` (installed by default on
-# GitHub Actions runtime).
+#  - Helm-Chart tarball (`cr`)
+#  - Helm-Chart OCI container-image (`helm push`)
+#  - Tekton-Task YAML (`helm template`)
+#  - Tekton Bundle OCI container-image (`tkn bundle`)
+#
+# The Chart version must be the same than the GITHUB_REF_NAME, in other words the release tag must
+# match the Chart version for consistency.
 #
 
 shopt -s inherit_errexit
@@ -27,95 +31,98 @@ readonly GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 
 # the repository name without the user/organization
 readonly INPUT_REPOSITORY_NAME="${INPUT_REPOSITORY_NAME:-}"
+# tekton bundle image suffix
+readonly INPUT_BUNDLE_SUFFIX="${INPUT_BUNDLE_SUFFIX:-}"
 
-[[ -z "${GITHUB_REF_NAME}" ]] && \
-	fail "GITHUB_REF_NAME environment variable is not set"
-
-[[ -z "${GITHUB_ACTOR}" ]] && \
-	fail "GITHUB_ACTOR environment variable is not set"
-
-[[ -z "${GITHUB_TOKEN}" ]] && \
-	fail "GITHUB_TOKEN environment variable is not set"
-
-[[ -z "${INPUT_REPOSITORY_NAME}" ]] && \
-	fail "INPUT_REPOSITORY_NAME environment variable is not set"
+for v in GITHUB_REF_NAME GITHUB_ACTOR GITHUB_TOKEN INPUT_REPOSITORY_NAME INPUT_BUNDLE_SUFFIX; do
+	[[ -z "${!v}" ]] &&
+		fail "'${v}' environment variable is not set!"
+done
 
 # making sure the chart name and version can be extracted from the Chart.yaml file, it must be
 # located in the current directory where the script is being executed
-phase "Extrating chart name and version"
+phase "Extrating chart name and version from './Chart.yaml'"
 
-[[ ! -f "Chart.yaml" ]] && \
+[[ ! -f "Chart.yaml" ]] &&
 	fail "Chart.yaml is not found on '${PWD}'"
 
 # estracting name and version from the Chart.yaml file directly
-readonly CHART_NAME="$(awk '/^name:/ { print $2 }' Chart.yaml)"
-readonly CHART_VERSION="$(awk '/^version:/ { print $2 }' Chart.yaml)"
+readonly chart_name="$(awk '/^name:/ { print $2 }' Chart.yaml)"
+readonly chart_version="$(awk '/^version:/ { print $2 }' Chart.yaml)"
 
-[[ -z "${CHART_NAME}" ]] && \
-	fail "CHART_NAME can't be otainted from Chart.yaml"
+[[ -z "${chart_name}" ]] &&
+	fail "'chart_name' can't be otainted from Chart.yaml"
 
-[[ -z "${CHART_VERSION}" ]] && \
-	fail "CHART_VERSION can't be otainted from Chart.yaml"
+[[ -z "${chart_version}" ]] &&
+	fail "'chart_version' can't be otainted from Chart.yaml"
 
-[[ "${GITHUB_REF_NAME}" != "${CHART_VERSION}" ]] && \
-	fail "Git tag '${GITHUB_REF_NAME}' and chart version '${CHART_VERSION}' must be the same!"
+[[ "${GITHUB_REF_NAME}" != "${chart_version}" ]] &&
+	fail "Git tag '${GITHUB_REF_NAME}' and chart version '${chart_version}' must be the same!"
 
 #
 # Registry Login
 #
 
-readonly CONTAINER_REGISTRY="ghcr.io"
+readonly container_registry="ghcr.io"
 
-phase "Logging in the Container-Registry '${CONTAINER_REGISTRY}' ('${GITHUB_ACTOR}')"
-helm registry login --username="${GITHUB_ACTOR}" --password="${GITHUB_TOKEN}" ${CONTAINER_REGISTRY}
+phase "Logging in the Container-Registry '${container_registry}' ('${GITHUB_ACTOR}')"
+helm registry login --username="${GITHUB_ACTOR}" --password="${GITHUB_TOKEN}" ${container_registry}
 
 #
 # Packaging Chart and Rendering Task
 #
 
 # pre-defined location for the tarball to be packaged on the next step
-readonly CR_RELEASE_PKGS=".cr-release-packages"
-readonly CHART_TARBALL="${CR_RELEASE_PKGS}/${CHART_NAME}-${CHART_VERSION}.tgz"
+readonly cr_release_pkgs=".cr-release-packages"
+readonly chart_tarball="${cr_release_pkgs}/${chart_name}-${chart_version}.tgz"
 
 # creating a tarball out of the chart, ignoring files based on the `.helmignore`
-phase "Packaging chart '${CHART_NAME}-${CHART_VERSION}'"
+phase "Packaging chart '${chart_name}-${chart_version}'"
 cr package
 
-[[ ! -f "${CHART_TARBALL}" ]] && \
-	fail "'${CHART_TARBALL}' is not found!"
+[[ ! -f "${chart_tarball}" ]] &&
+	fail "'${chart_tarball}' is not found!"
 
 # showing the contents of the tarball, here it's important to check if there are cluttering that
 # should be added to the `.helmignore`
-phase "Package contents '${CHART_TARBALL}'"
-tar -ztvpf ${CHART_TARBALL}
+phase "Package contents '${chart_tarball}'"
+tar -ztvpf ${chart_tarball}
 
 # creating a single file YAML payload with the task, it will be uploaded to the release page, side by
 # side with the chart tarball
-readonly TASK_PAYLOAD_FILE="${CR_RELEASE_PKGS}/${CHART_NAME}-${CHART_VERSION}.yaml"
-phase "Rendering template on a single Task file ('${TASK_PAYLOAD_FILE}')"
-helm template ${CHART_NAME} . >${TASK_PAYLOAD_FILE}
+readonly task_payload_file="${cr_release_pkgs}/${chart_name}-${chart_version}.yaml"
 
-[[ ! -f ${TASK_PAYLOAD_FILE} ]] && \
-	fail "Rendered task file is not found at '${TASK_PAYLOAD_FILE}'!"
+phase "Rendering template on a single Task file ('${task_payload_file}')"
+helm template ${chart_name} . >${task_payload_file}
+
+[[ ! -f "${task_payload_file}" ]] &&
+	fail "Rendered task file is not found at '${task_payload_file}'!"
 
 #
 # Release Upload
 #
 
-readonly ACTOR_REPOSITORY="${GITHUB_ACTOR}/${INPUT_REPOSITORY_NAME}"
-readonly OCI_IMAGE="oci://${CONTAINER_REGISTRY}/${GITHUB_ACTOR}"
+# composing the username (actor) and the repository
+readonly actor_repository="${GITHUB_ACTOR}/${INPUT_REPOSITORY_NAME}"
+# helm oci image uses the chart name and version to compose the image name and tag respectively
+readonly oci_image="${container_registry}/${GITHUB_ACTOR}"
 
-phase "Pushing '${CHART_TARBALL}' into '${OCI_IMAGE}'"
-helm push ${CHART_TARBALL} ${OCI_IMAGE}
+phase "Pushing Helm-Chart OCI image '${oci_image}'"
+helm push ${chart_tarball} "oci://${oci_image}"
 
-# uploading the chart release using it's version as the release name
-phase "Uploading chart '${CHART_TARBALL}' to '${ACTOR_REPOSITORY}' ($CHART_VERSION)"
+# tekton task bundle image needs to get the chart name plus suffix (to not collide with helm image),
+# and the chart version as image tag
+readonly oci_bundle_image="${oci_image}/${chart_name}${INPUT_BUNDLE_SUFFIX}:${chart_version}"
+
+phase "Pushing Tekton Task Bundle image ('${oci_bundle_image}')"
+tkn bundle push "${oci_bundle_image}" --filenames="${task_payload_file}"
+
+phase "Uploading chart '${chart_tarball}' to '${actor_repository}' (${chart_version})"
 cr upload \
 	--owner="${GITHUB_ACTOR}" \
 	--git-repo="${INPUT_REPOSITORY_NAME}" \
 	--token="${GITHUB_TOKEN}" \
 	--release-name-template='{{ .Version }}'
 
-# uploading the task file to the same release
-phase "Uploading task '${TASK_PAYLOAD_FILE}' to '${ACTOR_REPOSITORY}' ($CHART_VERSION)"
-gh release upload --clobber "${GITHUB_REF_NAME}" ${TASK_PAYLOAD_FILE}
+phase "Uploading task '${task_payload_file}' to '${actor_repository}' (${chart_version})"
+gh release upload --clobber "${GITHUB_REF_NAME}" ${task_payload_file}
