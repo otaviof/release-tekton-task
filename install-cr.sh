@@ -17,5 +17,5 @@ readonly cr_short_version="${INPUT_CR_VERSION//v/}"
 readonly cr_tarball="chart-releaser_${cr_short_version}_linux_amd64.tar.gz"
 readonly cr_host_path="helm/chart-releaser/releases/download/${INPUT_CR_VERSION}"
 
-phase "Downloading and installing Helm Chart-Releaser (cr) CLI '${INPUT_CLI_VERSION}'"
+phase "Downloading and installing Helm Chart-Releaser (cr) CLI '${INPUT_CR_VERSION}'"
 download_and_install ${cr_host_path} ${cr_tarball} cr
