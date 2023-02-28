@@ -115,7 +115,10 @@ helm push ${chart_tarball} "oci://${oci_image}"
 readonly oci_bundle_image="${oci_image}/${chart_name}:${chart_version}${INPUT_BUNDLE_SUFFIX}"
 
 phase "Pushing Tekton Task Bundle image ('${oci_bundle_image}')"
-tkn bundle push "${oci_bundle_image}" --filenames="${task_payload_file}"
+tkn bundle push "${oci_bundle_image}" \
+	--filenames="${task_payload_file}" \
+	--remote-username="${GITHUB_ACTOR}" \
+	--remote-password="${GITHUB_TOKEN}"
 
 phase "Uploading chart '${chart_tarball}' to '${actor_repository}' (${chart_version})"
 cr upload \
