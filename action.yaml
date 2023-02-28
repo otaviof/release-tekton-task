@@ -16,7 +16,7 @@ inputs:
     required: true
   bundle_suffix:
     description: |
-      Tekton Task Bundle image name suffix (`tkn bundle`)
+      Tekton Task Bundle image tag suffix (`tkn bundle`)
     default: "-bundle"
     required: false
   cr_version:

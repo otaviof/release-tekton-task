@@ -77,10 +77,10 @@ example-0.0.1.yaml
 
 ## Tekton Task Bundle Container-Image
 
-Using `tkn bundle` another OCI container image is created for the Tekton Task Bundle. The image name is based on the input `bundle_suffix`, as the following example:
+Using `tkn bundle` another OCI container image is created for the Tekton Task Bundle. The image tag is based on the input `bundle_suffix`, as shown below:
 
 ```
-oci://ghcr.io/actor/example-bundle:0.0.1
+oci://ghcr.io/actor/example:0.0.1-bundle
 ```
 
 [helmCR]: https://github.com/helm/chart-releaser

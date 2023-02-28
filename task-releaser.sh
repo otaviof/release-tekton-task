@@ -112,7 +112,7 @@ helm push ${chart_tarball} "oci://${oci_image}"
 
 # tekton task bundle image needs to get the chart name plus suffix (to not collide with helm image),
 # and the chart version as image tag
-readonly oci_bundle_image="${oci_image}/${chart_name}${INPUT_BUNDLE_SUFFIX}:${chart_version}"
+readonly oci_bundle_image="${oci_image}/${chart_name}:${chart_version}${INPUT_BUNDLE_SUFFIX}"
 
 phase "Pushing Tekton Task Bundle image ('${oci_bundle_image}')"
 tkn bundle push "${oci_bundle_image}" --filenames="${task_payload_file}"
