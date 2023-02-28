@@ -20,7 +20,7 @@ jobs:
       contents: write
       packages: write
     steps:
-      - uses: otaviof/task-release@main
+      - uses: otaviof/release-tekton-task@main
         with:
           repository_name: ${{ github.event.repository.name }}
         env:
