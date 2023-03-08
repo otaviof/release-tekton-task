@@ -28,7 +28,7 @@ inputs:
   crane_version:
     description: |
       go-containerregistry/crane version
-    default: latest
+    default: v0.13.0
     required: false
 runs:
   using: composite
