@@ -2,3 +2,5 @@
 /.git/
 /.gitignore
 /.vscode/
+/.helmignore
+/.cr-release-packages/

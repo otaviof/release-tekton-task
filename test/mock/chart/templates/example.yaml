@@ -1,3 +1,7 @@
 ---
-name: {{ .Chart.Name }}
-version: {{ .Chart.Version }}
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app.kubernetes.io/version: {{ .Chart.Version }}
