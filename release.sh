@@ -162,7 +162,7 @@ phase "Uploading Tekton Task and Helm-Chart package to release '${GITHUB_REF_NAM
 gh release upload --clobber ${GITHUB_REF_NAME} ${target_file} ${chart_tarball}
 
 phase "Logging in the Container-Registry '${target_registry}' ('${GITHUB_ACTOR}')"
-crane auth login --username="${GITHUB_ACTOR}" --password-stdin <<<${GITHUB_TOKEN}
+crane auth login --username="${GITHUB_ACTOR}" --password-stdin ${target_registry} <<<${GITHUB_TOKEN}
 
 phase "Pushing Tekton Task Bundle container image '${target_bundle_image_tag}'"
 crane copy ${local_bundle_image_tag} ${target_bundle_image_tag}
