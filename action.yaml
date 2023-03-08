@@ -43,7 +43,7 @@ runs:
 
     - uses: otaviof/setup-tekton-cli@main
       with:
-        cli_version: ${{ inputs.cli_version }}
+        version: ${{ inputs.cli_version }}
 
     - shell: bash
       run: ${{ github.action_path }}/probe.sh
