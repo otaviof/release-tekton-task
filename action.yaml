@@ -3,35 +3,31 @@ name: task-releaser
 description: |
   Action to release a Tekton Task packaged as a Helm-Chart. The release is based on the Chart
   (Chart.yaml) version and the current Git tag (shared via `GITHUB_REF_NAME`), the following
-  artifacts are related:
+  artifacts are release:
 
-   - Helm-Chart package (`.tgz`)
    - Tekton Task resource (`.yaml`)
-   - Helm-Chart container-image (OCI)
    - Tekton Task Bundle container-image (OCI)
+   - Helm-Chart package (`.tgz`)
+   - Helm-Chart container-image (OCI)
 inputs:
-  repository_name:
+  chart_image_tag_suffix:
     description: |
-      GitHub repository name, only the last name without the organization
-    required: true
-  bundle_suffix:
-    description: |
-      Tekton Task Bundle image tag suffix (`tkn bundle`)
-    default: "-bundle"
-    required: false
-  cr_version:
-    description: |
-      Helm Chart-Releaser (`cr`) version
-    default: v1.5.0
+      Helm-Chart OCI container-image tag suffix
+    default: "-chart"
     required: false
   cli_version:
     description: |
       Tekton CLI (`tkn`) version
-    default: v0.29.1
+    default: latest
     required: false
   helm_version:
     description: |
       Helm CLI (`helm`) version
+    default: latest
+    required: false
+  crane_version:
+    description: |
+      go-containerregistry/crane version
     default: latest
     required: false
 runs:
@@ -41,21 +37,26 @@ runs:
       with:
         version: ${{ inputs.helm_version }}
 
-    - shell: bash
-      env:
-        INPUT_CR_VERSION: ${{ inputs.cr_version }}
-      run: sudo -E ${{ github.action_path }}/install-cr.sh
+    - uses: imjasonh/setup-crane@v0.3
+      with:
+        version: ${{ inputs.crane_version }}
 
-    - shell: bash
-      env:
-        INPUT_CLI_VERSION: ${{ inputs.cli_version }}
-      run: sudo -E ${{ github.action_path }}/install-cli.sh
+    - uses: otaviof/setup-tekton-cli@main
+      with:
+        cli_version: ${{ inputs.cli_version }}
 
     - shell: bash
       run: ${{ github.action_path }}/probe.sh
 
     - shell: bash
+      working-directory: ${{ github.action_path }}
+      run: make registry-start
+
+    - shell: bash
       env:
-        INPUT_REPOSITORY_NAME: ${{ inputs.repository_name }}
-        INPUT_BUNDLE_SUFFIX: ${{ inputs.bundle_suffix }}
-      run: ${{ github.action_path }}/task-releaser.sh
+        INPUT_CHART_IMAGE_TAG_SUFFIX: ${{ inputs.chart_image_tag_suffix }}
+      run: ${{ github.action_path }}/release.sh
+
+    - shell: bash
+      working-directory: ${{ github.action_path }}
+      run: make registry-stop
