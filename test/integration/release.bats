@@ -2,7 +2,7 @@
 
 source ./test/helper/helper.sh
 
-task_releaser_sh="${PWD}/task-releaser.sh"
+task_releaser_sh="${PWD}/release.sh"
 
 # original helm executable location
 export HELM_BIN="$(which helm)"
@@ -11,6 +11,8 @@ export HELM_BIN="$(which helm)"
 mock_bin="${PWD}/test/mock/bin"
 
 @test "should fail when the required environment variables are not set" {
+	unset GITHUB_REF_NAME
+
 	run ${task_releaser_sh}
 	assert_failure
 	assert_output --partial 'is not set'
@@ -20,15 +22,15 @@ mock_bin="${PWD}/test/mock/bin"
 	export GITHUB_REF_NAME="0.0.1"
 	export GITHUB_ACTOR="actor"
 	export GITHUB_TOKEN="token"
-	export INPUT_REPOSITORY_NAME="repository"
-	export INPUT_BUNDLE_SUFFIX="-bundle"
+
+	export INPUT_CHART_IMAGE_TAG_SUFFIX="-chart"
 
 	{
 		export PATH="${mock_bin}:${PATH}"
 
 		cd ${BASE_DIR}
 
-		run ${task_releaser_sh}
+		run ${task_releaser_sh} >&3
 		assert_failure
 		assert_output --partial 'not found'
 
@@ -40,8 +42,8 @@ mock_bin="${PWD}/test/mock/bin"
 	export GITHUB_REF_NAME="0.0.1"
 	export GITHUB_ACTOR="actor"
 	export GITHUB_TOKEN="token"
-	export INPUT_REPOSITORY_NAME="repository"
-	export INPUT_BUNDLE_SUFFIX="-bundle"
+
+	export INPUT_CHART_IMAGE_TAG_SUFFIX="-chart"
 
 	cp -r ./test/mock/chart/* ${BASE_DIR}/
 
@@ -50,7 +52,7 @@ mock_bin="${PWD}/test/mock/bin"
 
 		cd ${BASE_DIR}
 
-		run ${task_releaser_sh}
+		run ${task_releaser_sh} >&3
 		assert_success
 
 		cd -
