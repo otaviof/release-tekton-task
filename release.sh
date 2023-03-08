@@ -190,7 +190,7 @@ crane copy ${local_chart_image_tag} ${target_chart_image_tag}
 
 # removing temporary directoy only when it has been created by this script, using the temporary
 # directory patter informed to mktemp early on
-if [ "${BASE_DIR}" == *release-tekton-task* ]; then
+if [[ "${BASE_DIR}" == *"release-tekton-task"* ]]; then
 	phase "Cleaning up temporary directory ('${BASE_DIR}')"
 	rm -rf ${BASE_DIR}
 fi
