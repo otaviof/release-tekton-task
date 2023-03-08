@@ -21,12 +21,13 @@ phase "Loading configuration from environment variables"
 # environment variables shared by github actions
 readonly GITHUB_ACTOR="${GITHUB_ACTOR:-}"
 readonly GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+readonly GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}"
 readonly GITHUB_REF_NAME="${GITHUB_REF_NAME:-}"
 
 # suffix for helm-chart container image tag
 readonly INPUT_CHART_IMAGE_TAG_SUFFIX="${INPUT_CHART_IMAGE_TAG_SUFFIX:-}"
 
-for v in GITHUB_ACTOR GITHUB_TOKEN GITHUB_REF_NAME INPUT_CHART_IMAGE_TAG_SUFFIX; do
+for v in GITHUB_ACTOR GITHUB_TOKEN GITHUB_REPOSITORY GITHUB_REF_NAME INPUT_CHART_IMAGE_TAG_SUFFIX; do
 	[[ -z "${!v}" ]] &&
 		fail "'${v}' environment variable is not set!"
 done
@@ -102,6 +103,13 @@ function render_helm_chart_template() {
 	return 0
 }
 
+# uses crane to set the repository reference as image's annotation, the GitHub container registry can
+# link the image with the respective project using the reference
+function set_image_annotations() {
+	local _repository="https://github.com/${GITHUB_REPOSITORY}"
+	crane mutate --annotation="org.opencontainers.image.source=${_repository}" ${1}
+}
+
 # creates the helm chart container image using `helm push`, then uses `crane tag` to rename the image
 # to the informed tag
 function create_helm_chart_image() {
@@ -111,6 +119,16 @@ function create_helm_chart_image() {
 
 	helm push ${_chart_tarball} "oci://${_registry_namespace}"
 	crane tag "${_registry_namespace}/${chart_name}:${chart_version}" ${_target_tag}
+	set_image_annotations "${_registry_namespace}/${chart_name}:${_target_tag}"
+}
+
+# creates the tekton task bundle container image, setting the regular annotations right after
+function create_task_bundle_image() {
+	local _task_file="${1}"
+	local _image_tag="${2}"
+
+	tkn bundle push ${_image_tag} --filenames="${_task_file}"
+	set_image_annotations ${_image_tag}
 }
 
 #
@@ -156,7 +174,7 @@ readonly local_bundle_image_tag="${local_registry_namespace}/${chart_name}:${cha
 readonly target_bundle_image_tag="${target_registry_namespace}/${chart_name}:${chart_version}"
 
 phase "Creating Tekton Task Bundle image '${local_bundle_image_tag}'"
-tkn bundle push ${local_bundle_image_tag} --filenames="${target_file}"
+create_task_bundle_image ${target_file} ${local_bundle_image_tag}
 
 phase "Uploading Tekton Task and Helm-Chart package to release '${GITHUB_REF_NAME}'"
 gh release upload --clobber ${GITHUB_REF_NAME} ${target_file} ${chart_tarball}

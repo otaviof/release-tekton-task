@@ -19,9 +19,10 @@ mock_bin="${PWD}/test/mock/bin"
 }
 
 @test "should fail when 'Chart.yaml' is not found" {
-	export GITHUB_REF_NAME="0.0.1"
 	export GITHUB_ACTOR="actor"
 	export GITHUB_TOKEN="token"
+	export GITHUB_REF_NAME="0.0.1"
+	export GITHUB_REPOSITORY="org/repo"
 
 	export INPUT_CHART_IMAGE_TAG_SUFFIX="-chart"
 
@@ -39,9 +40,10 @@ mock_bin="${PWD}/test/mock/bin"
 }
 
 @test "should have a sucessful run using mocked executables" {
-	export GITHUB_REF_NAME="0.0.1"
 	export GITHUB_ACTOR="actor"
 	export GITHUB_TOKEN="token"
+	export GITHUB_REF_NAME="0.0.1"
+	export GITHUB_REPOSITORY="org/repo"
 
 	export INPUT_CHART_IMAGE_TAG_SUFFIX="-chart"
 
