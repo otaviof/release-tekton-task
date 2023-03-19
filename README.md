@@ -31,12 +31,12 @@ jobs:
 
 ## Inputs
 
-| Input                    | Required | Description                                         |
-|:-------------------------|:--------:|:----------------------------------------------------|
-| `chart_image_tag_suffix` | `false`  | Helm-Chart OCI container-image tag suffix           |
-| `cli_version`            | `false`  | [Tekton CLI (`tkn`)][tektonCLI] version             |
-| `helm_version`           | `false`  | [Helm CLI (`helm`)][helm] version                   |
-| `crane_version`          | `false`  | [`go-containerregistry/crane`][crane] version       |
+| Input               | Required | Description                                       |
+| :------------------ | :------: | :------------------------------------------------ |
+| `bundle_tag_suffix` | `false`  | Tekton Task-Bundle OCI container-image tag suffix |
+| `cli_version`       | `false`  | [Tekton CLI (`tkn`)][tektonCLI] version           |
+| `helm_version`      | `false`  | [Helm CLI (`helm`)][helm] version                 |
+| `crane_version`     | `false`  | [`go-containerregistry/crane`][crane] version     |
 
 # Release Contents
 
@@ -46,14 +46,14 @@ The action expects to find a `Chart.yaml` file in the root of the repository, fr
 
 The release artifacts are described below, the GitHub organization is `actor` and the repository is `example` containing a Chart version `0.0.1`, please consider:
 
-| Artifact Name                             | Description                            |
-|:------------------------------------------|:---------------------------------------|
-| `example-0.0.1.yaml`                      | Tekton Task resource                   |
-| `oci://ghcr.io/actor/example:0.0.1`       | Tekton Task Bundle OCI container-image |
-| `example-0.0.1.tgz`                       | Helm-Chart tarball                     |
-| `oci://ghcr.io/actor/example:0.0.1-chart` | Helm-Chart OCI container-image         |
+| Artifact Name                              | Description                            |
+| :----------------------------------------- | :------------------------------------- |
+| `example-0.0.1.yaml`                       | Tekton Task resource                   |
+| `oci://ghcr.io/actor/example:0.0.1-bundle` | Tekton Task-Bundle OCI container-image |
+| `example-0.0.1.tgz`                        | Helm-Chart tarball                     |
+| `oci://ghcr.io/actor/example:0.0.1`        | Helm-Chart OCI container-image         |
 
-The Helm-Chart container-image receives the input `chart_image_tag_suffix` to compose the container-image tag, making it different than what's in use on the Tekton Bundle.
+The Tekton Task-Bundle container-image receives the input `bundle_tag_suffix` to compose the final tag.
 
 [crane]: https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
 [helm]: https://github.com/helm/helm

@@ -10,10 +10,10 @@ description: |
    - Helm-Chart package (`.tgz`)
    - Helm-Chart container-image (OCI)
 inputs:
-  chart_image_tag_suffix:
+  bundle_tag_suffix:
     description: |
-      Helm-Chart OCI container-image tag suffix
-    default: "-chart"
+      Tekton Task-Bundle OCI container-image tag suffix
+    default: "-bundle"
     required: false
   cli_version:
     description: |
@@ -54,7 +54,7 @@ runs:
 
     - shell: bash
       env:
-        INPUT_CHART_IMAGE_TAG_SUFFIX: ${{ inputs.chart_image_tag_suffix }}
+        INPUT_BUNDLE_TAG_SUFFIX: ${{ inputs.bundle_tag_suffix }}
       run: ${{ github.action_path }}/release.sh
 
     - shell: bash

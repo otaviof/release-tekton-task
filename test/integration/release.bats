@@ -24,7 +24,7 @@ mock_bin="${PWD}/test/mock/bin"
 	export GITHUB_REF_NAME="0.0.1"
 	export GITHUB_REPOSITORY="org/repo"
 
-	export INPUT_CHART_IMAGE_TAG_SUFFIX="-chart"
+	export INPUT_BUNDLE_TAG_SUFFIX="-bundle"
 
 	{
 		export PATH="${mock_bin}:${PATH}"
@@ -45,7 +45,7 @@ mock_bin="${PWD}/test/mock/bin"
 	export GITHUB_REF_NAME="0.0.1"
 	export GITHUB_REPOSITORY="org/repo"
 
-	export INPUT_CHART_IMAGE_TAG_SUFFIX="-chart"
+	export INPUT_BUNDLE_TAG_SUFFIX="-bundle"
 
 	cp -r ./test/mock/chart/* ${BASE_DIR}/
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# Packages and release the informed Tekton Task repository using the Helm-Chart as the underlying
-# packaging mechanism.
+# Packages and release the informed Tekton Task repository using the Helm-Chart structure as the
+# scaffold for the # packaging mechanism.
 #
-# The Chart version must be the same than the GITHUB_REF_NAME, in other words the release tag must
-# match the Chart version for consistency.
+# The Chart version must be the same than the GITHUB_REF_NAME (release's tag), in other words the
+# GitHub Release must match the Chart version for consistency.
 #
 
 shopt -s inherit_errexit
@@ -24,10 +24,10 @@ readonly GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 readonly GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}"
 readonly GITHUB_REF_NAME="${GITHUB_REF_NAME:-}"
 
-# suffix for helm-chart container image tag
-readonly INPUT_CHART_IMAGE_TAG_SUFFIX="${INPUT_CHART_IMAGE_TAG_SUFFIX:-}"
+# the image tag's suffix for tekton task bundle
+readonly INPUT_BUNDLE_TAG_SUFFIX="${INPUT_BUNDLE_TAG_SUFFIX:-}"
 
-for v in GITHUB_ACTOR GITHUB_TOKEN GITHUB_REPOSITORY GITHUB_REF_NAME INPUT_CHART_IMAGE_TAG_SUFFIX; do
+for v in GITHUB_ACTOR GITHUB_TOKEN GITHUB_REPOSITORY GITHUB_REF_NAME INPUT_BUNDLE_TAG_SUFFIX; do
 	[[ -z "${!v}" ]] &&
 		fail "'${v}' environment variable is not set!"
 done
@@ -110,15 +110,15 @@ function set_image_annotations() {
 	crane mutate --annotation="org.opencontainers.image.source=${_repository}" ${1}
 }
 
-# creates the helm chart container image using `helm push`, then uses `crane tag` to rename the image
-# to the informed tag
+# creates the helm chart container image using `helm push`, which creates a image using the
+# chart-name as the image name, and chart-version as tag. That's a Helm convention enforced to
+# install the chart via container image.
 function create_helm_chart_image() {
 	local _chart_tarball="${1}"
 	local _registry_namespace="${2}"
 	local _target_tag="${3}"
 
 	helm push ${_chart_tarball} "oci://${_registry_namespace}"
-	crane tag "${_registry_namespace}/${chart_name}:${chart_version}" ${_target_tag}
 	set_image_annotations "${_registry_namespace}/${chart_name}:${_target_tag}"
 }
 
@@ -159,19 +159,19 @@ ls -lh ${target_file}
 readonly local_registry_namespace="${local_registry}/${GITHUB_ACTOR}"
 readonly target_registry_namespace="${target_registry}/${GITHUB_ACTOR}"
 
-# helm chart container image tag, using the configured suffix
-readonly chart_tag="${chart_version}${INPUT_CHART_IMAGE_TAG_SUFFIX}"
-
 # helm chart fully qualified image name, for local and remote (target) container registries
-readonly local_chart_image_tag="${local_registry_namespace}/${chart_name}:${chart_tag}"
-readonly target_chart_image_tag="${target_registry_namespace}/${chart_name}:${chart_tag}"
+readonly local_chart_image_tag="${local_registry_namespace}/${chart_name}:${chart_version}"
+readonly target_chart_image_tag="${target_registry_namespace}/${chart_name}:${chart_version}"
 
 phase "Creating Helm-Chart image '${local_chart_image_tag}'"
-create_helm_chart_image ${chart_tarball} ${local_registry_namespace} ${chart_tag}
+create_helm_chart_image ${chart_tarball} ${local_registry_namespace} ${chart_version}
+
+# task bundle tag name, using the chart version and bundle tag suffix informed
+readonly bundle_tag="${chart_version}${INPUT_BUNDLE_TAG_SUFFIX}"
 
 # task bundle fully qualified image names, local and remote (target) registries
-readonly local_bundle_image_tag="${local_registry_namespace}/${chart_name}:${chart_version}"
-readonly target_bundle_image_tag="${target_registry_namespace}/${chart_name}:${chart_version}"
+readonly local_bundle_image_tag="${local_registry_namespace}/${chart_name}:${bundle_tag}"
+readonly target_bundle_image_tag="${target_registry_namespace}/${chart_name}:${bundle_tag}"
 
 phase "Creating Tekton Task Bundle image '${local_bundle_image_tag}'"
 create_task_bundle_image ${target_file} ${local_bundle_image_tag}
