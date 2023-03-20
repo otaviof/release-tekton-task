@@ -29,14 +29,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
+This action is meant to run when a new [repository release is created][githubReleaseDocs], the action expects to find a draft release in order to upload the artifacts and generate the release notes accordingly.
+
+Make sure the action only runs when a `tag` is issued, as the example above shows, and a draft release is already created for the `tag`. After the action is executed you can publish the release.
+
 ## Inputs
 
-| Input               | Required | Description                                       |
-| :------------------ | :------: | :------------------------------------------------ |
-| `bundle_tag_suffix` | `false`  | Tekton Task-Bundle OCI container-image tag suffix |
-| `cli_version`       | `false`  | [Tekton CLI (`tkn`)][tektonCLI] version           |
-| `helm_version`      | `false`  | [Helm CLI (`helm`)][helm] version                 |
-| `crane_version`     | `false`  | [`go-containerregistry/crane`][crane] version     |
+| Input               | Required | Default   | Description                                       |
+| :------------------ | :------: | :-------- | :------------------------------------------------ |
+| `bundle_tag_suffix` | `false`  | `-bundle` | Tekton Task-Bundle OCI container-image tag suffix |
+| `cli_version`       | `false`  | `latest`  | [Tekton CLI (`tkn`)][tektonCLI] version           |
+| `helm_version`      | `false`  | `latest`  | [Helm CLI (`helm`)][helm] version                 |
+| `crane_version`     | `false`  | `latest`  | [`go-containerregistry/crane`][crane] version     |
 
 # Release Contents
 
@@ -53,10 +57,16 @@ The release artifacts are described below, the GitHub organization is `actor` an
 | `example-0.0.1.tgz`                        | Helm-Chart tarball                     |
 | `oci://ghcr.io/actor/example:0.0.1`        | Helm-Chart OCI container-image         |
 
-The Tekton Task-Bundle container-image receives the input `bundle_tag_suffix` to compose the final tag.
+The [Tekton Task-Bundle][tektonTaskBundle] container-image receives the input `bundle_tag_suffix` to compose the final tag.
+
+## Release Notes
+
+Release note are generated automatically, with the respective commands to copy-and-paste to rollout the release artifacts.
 
 [crane]: https://github.com/google/go-containerregistry/blob/main/cmd/crane/doc/crane.md
+[githubReleaseDocs]: https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository#creating-a-release
 [helm]: https://github.com/helm/helm
 [tektonCLI]: https://github.com/tektoncd/cli
+[tektonTaskBundle]: https://tekton.dev/docs/pipelines/tekton-bundle-contracts/
 [testWorkflow]: https://github.com/otaviof/release-tekton-task/actions/workflows/test.yaml
 [testWorkflowBadge]: https://github.com/otaviof/release-tekton-task/actions/workflows/test.yaml/badge.svg
