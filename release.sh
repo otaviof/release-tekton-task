@@ -101,7 +101,7 @@ cat ${release_notes_md}
 set +x
 
 phase "Editing GitHub Relase to include release notes"
-gh release edit --draft --notes-file=${release_notes_md} ${GITHUB_REF_NAME}
+gh release edit --draft --notes-file=${release_notes_md} --tag=${GITHUB_REF_NAME} ${GITHUB_REF_NAME}
 
 phase "Logging in the Container-Registry '${TARGET_REGISTRY}' ('${GITHUB_ACTOR}')"
 crane auth login --username="${GITHUB_ACTOR}" --password-stdin ${TARGET_REGISTRY} <<<${GITHUB_TOKEN}
