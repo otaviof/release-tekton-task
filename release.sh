@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Packages and release the informed Tekton Task repository using the Helm-Chart structure as the
-# scaffold for the # packaging mechanism.
+# scaffold for the packages created by this action.
 #
 # The Chart version must be the same than the GITHUB_REF_NAME (release's tag), in other words the
 # GitHub Release must match the Chart version for consistency.
@@ -10,124 +10,62 @@
 shopt -s inherit_errexit
 set -eu -o pipefail
 
-source "$(dirname ${BASH_SOURCE[0]})/common.sh"
+# current script directory path
+readonly source_dir="$(dirname ${BASH_SOURCE[0]})"
 
-#
-# Inputs
-#
+source "${source_dir}/common.sh"
+source "${source_dir}/inputs.sh"
 
-phase "Loading configuration from environment variables"
+# path to the script to generate release notes
+readonly generate_notes_sh="${source_dir}/notes.sh"
 
-# environment variables shared by github actions
-readonly GITHUB_ACTOR="${GITHUB_ACTOR:-}"
-readonly GITHUB_TOKEN="${GITHUB_TOKEN:-}"
-readonly GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}"
-readonly GITHUB_REF_NAME="${GITHUB_REF_NAME:-}"
+[[ ! -f "${generate_notes_sh}" ]] &&
+	fail "Unable to find '${generate_notes_sh}'"
 
-# the image tag's suffix for tekton task bundle
-readonly INPUT_BUNDLE_TAG_SUFFIX="${INPUT_BUNDLE_TAG_SUFFIX:-}"
-
-for v in GITHUB_ACTOR GITHUB_TOKEN GITHUB_REPOSITORY GITHUB_REF_NAME INPUT_BUNDLE_TAG_SUFFIX; do
-	[[ -z "${!v}" ]] &&
-		fail "'${v}' environment variable is not set!"
-done
-
-# temporary directory for the artifacts produced by this script, using the informed location when
-# available otherwise creating a new directory each run
-readonly BASE_DIR="${BASE_DIR:-$(mktemp -d /tmp/release-tekton-task.XXXXXX)}"
-
-#
-# Variables
-#
-
-# temporary container registry URL
-readonly local_registry="127.0.0.1:5000"
-# permanent container registry URL
-readonly target_registry="ghcr.io"
-
-# default location for the chart metadata file
-readonly chart_yaml="Chart.yaml"
-
-[[ ! -f "${chart_yaml}" ]] &&
-	fail "File '${chart_yaml}' is not found at '${PWD}'"
-
-# chart name and version will be extrated later on
-chart_name=""
-chart_version=""
-
-#
-# Functions
-#
-
-# extracts the chart's name and version from the manifest file, setting the results on the readonly
-# predefined global variables, and assert the chart version is the same than GITHUB_REF_NAME
-function extract_chart_name_version() {
-	readonly chart_name="$(awk '/^name:/ { print $2 }' ${chart_yaml})"
-	readonly chart_version="$(awk '/^version:/ { print $2 }' ${chart_yaml})"
-
-	[[ -z "${chart_name}" ]] &&
-		fail "'chart_name' can't be otainted from '${chart_yaml}'"
-
-	[[ -z "${chart_version}" ]] &&
-		fail "'chart_version' can't be otainted from ${chart_yaml}"
-
-	[[ "${GITHUB_REF_NAME}" != "${chart_version}" ]] &&
-		fail "Git tag '${GITHUB_REF_NAME}' and chart version '${chart_version}' must be the same!"
-
-	return 0
-}
-
-# packages the local helm chart using `helm package`, using as destination directory the `dirname` of
-# the informed chart taball path, after packaging the chart tarball asserts the file exists
+# Packages the local helm chart using `helm package`, using as destination directory the `dirname` of
+# chart taball file, after packaging asserts the tarball exists
 function package_helm_chart() {
-	local _chart_tarball="${1}"
-	local _destination_dir="$(dirname ${chart_tarball})"
+	local _destination_dir="$(dirname ${CHART_TARBALL})"
 
 	helm package --destination="${_destination_dir}" . >/dev/null
 
-	[[ ! -f "${_chart_tarball}" ]] &&
-		fail "'${_chart_tarball}' is not found!"
+	[[ ! -f "${CHART_TARBALL}" ]] &&
+		fail "'${CHART_TARBALL}' is not found!"
 
 	return 0
 }
 
-# renders the task file resource using `helm template`, and then asserts the rendered file exists
+# Renders the task file resource using `helm template`, asserts the rendered file is created.
 function render_helm_chart_template() {
-	local _destination="${1}"
+	helm template . >${RENDERED_TASK_FILE}
 
-	helm template . >${_destination}
-
-	[[ ! -f "${_destination}" ]] &&
-		fail "Rendered task file is not found at '${_destination}'!"
+	[[ ! -f "${RENDERED_TASK_FILE}" ]] &&
+		fail "Rendered task file is not found at '${RENDERED_TASK_FILE}'!"
 
 	return 0
 }
 
-# uses crane to set the repository reference as image's annotation, the GitHub container registry can
-# link the image with the respective project using the reference
+# Uses crane to set the repository reference as image's annotation, the GitHub container registry
+# links the image with the respective project.
 function set_image_annotations() {
-	local _repository="https://github.com/${GITHUB_REPOSITORY}"
-	crane mutate --annotation="org.opencontainers.image.source=${_repository}" ${1}
+	crane mutate --annotation="org.opencontainers.image.source=${GITHUB_REPOSITORY_URL}" ${1}
 }
 
 # creates the helm chart container image using `helm push`, which creates a image using the
 # chart-name as the image name, and chart-version as tag. That's a Helm convention enforced to
 # install the chart via container image.
 function create_helm_chart_image() {
-	local _chart_tarball="${1}"
-	local _registry_namespace="${2}"
-	local _target_tag="${3}"
+	local _registry_namespace="${1}"
 
-	helm push ${_chart_tarball} "oci://${_registry_namespace}"
-	set_image_annotations "${_registry_namespace}/${chart_name}:${_target_tag}"
+	helm push ${CHART_TARBALL} "oci://${_registry_namespace}"
+	set_image_annotations "${_registry_namespace}/${CHART_NAME}:${CHART_VERSION}"
 }
 
-# creates the tekton task bundle container image, setting the regular annotations right after
+# Creates the tekton task bundle container image, setting the regular annotations right after
 function create_task_bundle_image() {
-	local _task_file="${1}"
-	local _image_tag="${2}"
+	local _image_tag="${1}"
 
-	tkn bundle push ${_image_tag} --filenames="${_task_file}"
+	tkn bundle push ${_image_tag} --filenames="${RENDERED_TASK_FILE}"
 	set_image_annotations ${_image_tag}
 }
 
@@ -135,58 +73,44 @@ function create_task_bundle_image() {
 # Main
 #
 
-# inspecting the current directory to extract chart's name and version
-phase "Extracting Chart's name and version ('${chart_yaml}')"
-extract_chart_name_version
+phase "Packaging Helm-Chart '${CHART_NAME}-${CHART_VERSION}' ('${BASE_DIR}')"
+package_helm_chart
 
-# full path to the expected helm chart tarball
-readonly chart_tarball="${BASE_DIR}/${chart_name}-${chart_version}.tgz"
+phase "Helm-Chart package contents '${CHART_TARBALL}'"
+tar -ztvpf ${CHART_TARBALL}
 
-phase "Packaging Helm-Chart '${chart_name}-${chart_version}' ('${BASE_DIR}')"
-package_helm_chart ${chart_tarball}
+phase "Rendering template on a single Task file '${RENDERED_TASK_FILE}'"
+render_helm_chart_template
+ls -lh ${RENDERED_TASK_FILE}
 
-phase "Helm-Chart package contents '${chart_tarball}'"
-tar -ztvpf ${chart_tarball}
+phase "Creating Helm-Chart image '${LOCAL_CHART_IMAGE_TAG}'"
+create_helm_chart_image ${LOCAL_REGISTRY_NAMESPACE}
 
-# full path to the expected rendered task resource file
-readonly target_file="${BASE_DIR}/${chart_name}-${chart_version}.yaml"
-
-phase "Rendering template on a single Task file '${target_file}'"
-render_helm_chart_template ${target_file}
-ls -lh ${target_file}
-
-# local and target registries hostname, followed by the path (namespace)
-readonly local_registry_namespace="${local_registry}/${GITHUB_ACTOR}"
-readonly target_registry_namespace="${target_registry}/${GITHUB_ACTOR}"
-
-# helm chart fully qualified image name, for local and remote (target) container registries
-readonly local_chart_image_tag="${local_registry_namespace}/${chart_name}:${chart_version}"
-readonly target_chart_image_tag="${target_registry_namespace}/${chart_name}:${chart_version}"
-
-phase "Creating Helm-Chart image '${local_chart_image_tag}'"
-create_helm_chart_image ${chart_tarball} ${local_registry_namespace} ${chart_version}
-
-# task bundle tag name, using the chart version and bundle tag suffix informed
-readonly bundle_tag="${chart_version}${INPUT_BUNDLE_TAG_SUFFIX}"
-
-# task bundle fully qualified image names, local and remote (target) registries
-readonly local_bundle_image_tag="${local_registry_namespace}/${chart_name}:${bundle_tag}"
-readonly target_bundle_image_tag="${target_registry_namespace}/${chart_name}:${bundle_tag}"
-
-phase "Creating Tekton Task Bundle image '${local_bundle_image_tag}'"
-create_task_bundle_image ${target_file} ${local_bundle_image_tag}
+phase "Creating Tekton Task Bundle image '${LOCAL_BUNDLE_IMAGE_TAG}'"
+create_task_bundle_image ${LOCAL_BUNDLE_IMAGE_TAG}
 
 phase "Uploading Tekton Task and Helm-Chart package to release '${GITHUB_REF_NAME}'"
-gh release upload --clobber ${GITHUB_REF_NAME} ${target_file} ${chart_tarball}
+gh release upload --clobber ${GITHUB_REF_NAME} ${RENDERED_TASK_FILE} ${CHART_TARBALL}
 
-phase "Logging in the Container-Registry '${target_registry}' ('${GITHUB_ACTOR}')"
-crane auth login --username="${GITHUB_ACTOR}" --password-stdin ${target_registry} <<<${GITHUB_TOKEN}
+readonly release_notes_md="${BASE_DIR}/release-notes.md"
 
-phase "Pushing Tekton Task Bundle container image '${target_bundle_image_tag}'"
-crane copy ${local_bundle_image_tag} ${target_bundle_image_tag}
+phase "Generating release notes at '${release_notes_md}'"
+${generate_notes_sh} ${release_notes_md}
+set -x
+cat ${release_notes_md}
+set +x
 
-phase "Pushing Helm-Chart container image '${target_chart_image_tag}'"
-crane copy ${local_chart_image_tag} ${target_chart_image_tag}
+phase "Editing GitHub Relase to include release notes"
+gh release edit --draft --notes-file=${release_notes_md} ${GITHUB_REF_NAME}
+
+phase "Logging in the Container-Registry '${TARGET_REGISTRY}' ('${GITHUB_ACTOR}')"
+crane auth login --username="${GITHUB_ACTOR}" --password-stdin ${TARGET_REGISTRY} <<<${GITHUB_TOKEN}
+
+phase "Pushing Tekton Task Bundle container image '${TARGET_BUNDLE_IMAGE_TAG}'"
+crane copy ${LOCAL_BUNDLE_IMAGE_TAG} ${TARGET_BUNDLE_IMAGE_TAG}
+
+phase "Pushing Helm-Chart container image '${TARGET_CHART_IMAGE_TAG}'"
+crane copy ${LOCAL_CHART_IMAGE_TAG} ${TARGET_CHART_IMAGE_TAG}
 
 # removing temporary directoy only when it has been created by this script, using the temporary
 # directory patter informed to mktemp early on
