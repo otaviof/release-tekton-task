@@ -49,11 +49,12 @@ declare -rx CHART_VERSION="$(awk '/^version:/ { print $2 }' ${chart_yaml})"
 # Release Settings
 #
 
-declare -rx GITHUB_REPOSITORY_URL="https://github.com/${GITHUB_REPOSITORY}"
-
 # temporary directory for the artifacts produced by this script, using the informed location when
 # available otherwise creating a new directory for each run
-declare -rx BASE_DIR="${BASE_DIR:-$(mktemp -d /tmp/release-tekton-task.XXXXXX)}"
+declare -rx BASE_DIR="${BASE_DIR:-$(mktemp -d /tmp/release.XXXXXX)}"
+
+# github repository url where the release is taking place
+declare -rx GITHUB_REPOSITORY_URL="https://github.com/${GITHUB_REPOSITORY}"
 
 # full path to the chart tarball (tgz) and the rendered tekton task file (yaml)
 declare -rx TARBALL_FILE_NAME="${CHART_NAME}-${CHART_VERSION}.tgz"

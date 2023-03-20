@@ -92,9 +92,10 @@ create_task_bundle_image ${LOCAL_BUNDLE_IMAGE_TAG}
 phase "Uploading Tekton Task and Helm-Chart package to release '${GITHUB_REF_NAME}'"
 gh release upload --clobber ${GITHUB_REF_NAME} ${RENDERED_TASK_FILE} ${CHART_TARBALL}
 
+# full path to the markdown file where the generated release-notes will be stored
 readonly release_notes_md="${BASE_DIR}/release-notes.md"
 
-phase "Generating release notes at '${release_notes_md}'"
+phase "Generating release notes ('${release_notes_md}')"
 ${generate_notes_sh} ${release_notes_md}
 set -x
 cat ${release_notes_md}
@@ -114,7 +115,7 @@ crane copy ${LOCAL_CHART_IMAGE_TAG} ${TARGET_CHART_IMAGE_TAG}
 
 # removing temporary directoy only when it has been created by this script, using the temporary
 # directory patter informed to mktemp early on
-if [[ "${BASE_DIR}" == *"release-tekton-task"* ]]; then
+if [[ "${BASE_DIR}" == "/tmp/release."* ]]; then
 	phase "Cleaning up temporary directory ('${BASE_DIR}')"
 	rm -rf ${BASE_DIR}
 fi
